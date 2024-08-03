@@ -185,7 +185,7 @@ class MyYOLO(nn.Module):
         
         self.fcn1 = FCN(in_dim=hidden_dim * 24) # output channel : 384, 768
         self.fcn2 = FCN(in_dim=hidden_dim * 32) # output channel : 512, 1024
-        self.fcn3 = FCN(in_dim=hidden_dim * 32)
+        self.fcn3 = FCN(in_dim=hidden_dim * 32) # output channel : 512, 1024
         
         self.detect1 = nn.Sequential(
             nn.Conv2d(hidden_dim * 24, 3 * (4 + 1 + n_class), kernel_size=1, stride=1, padding=0, bias=True),
