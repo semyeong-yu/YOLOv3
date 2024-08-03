@@ -46,15 +46,15 @@ def arg_parse():
     # train/test
     parser.add_argument("--no_resume", action='store_true') # no_resume = True if specified in argument
     parser.add_argument("--n_epochs", type=int, default=100, required=True)
-    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--num_workers", type=int, default=8)
     parser.add_argument("--val_epoch", type=int, default=10, required=True)
     parser.add_argument("--log_dir", type=str, default="./log")
     parser.add_argument("--accumulate_iter", type=int, default=10)
     parser.add_argument("--max_grad_norm", type=float, default=5.)
-    parser.add_argument("--bbox_weight", type=float, default=1.)
-    parser.add_argument("--object_weight", type=float, default=1.)
-    parser.add_argument("--class_weight", type=float, default=1.)
+    parser.add_argument("--bbox_weight", type=float, default=0.1)
+    parser.add_argument("--object_weight", type=float, default=0.1)
+    parser.add_argument("--class_weight", type=float, default=0.1)
     parser.add_argument("--big_anchor_size", nargs=6, type=int, default=[116, 90, 156, 198, 373, 326], help='A list of 3 anchor sizes for 13x13 small feature map')
     parser.add_argument("--middle_anchor_size", nargs=6, type=int, default=[30, 61, 62, 45, 59, 119], help='A list of 3 anchor sizes for 26x26 middle feature map')
     parser.add_argument("--small_anchor_size", nargs=6, type=int, default=[10, 13, 16, 30, 33, 23], help='A list of 3 anchor sizes for 52x52 big feature map')
@@ -64,11 +64,11 @@ def arg_parse():
     return parser.parse_args()
 
 def fix_seed(random_seed):
-    torch.manual_seed(random_seed)
-    torch.cuda.manual_seed(random_seed)
-    torch.cuda.manual_seed_all(random_seed)  # if use multi-GPU
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    torch.manual_seed(random_seed) # for CPU
+    torch.cuda.manual_seed(random_seed) # for GPU
+    torch.cuda.manual_seed_all(random_seed) # if use multi-GPU
+    torch.backends.cudnn.deterministic = True # cuDNN uses deterministic algorithm: 동일한 입력과 초기 조건에서 항상 같은 결과를 보장
+    torch.backends.cudnn.benchmark = False # input data size가 변하는 경우 cuDNN은 다양한 algorithm을 benchmark하여 가장 빠른 것을 선택하는데, 이는 재현성에 부정적인 영향을 줌. 입력 크기가 고정되어 있거나 재현성이 중요한 경우 cuDNN의 benchmark 기능을 끔
     np.random.seed(random_seed)
     random.seed(random_seed)
 

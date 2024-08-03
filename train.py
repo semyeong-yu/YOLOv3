@@ -11,7 +11,7 @@ class Runner:
         self.dtype = torch.float32
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.args = args
-        self.model = model.to(self.device)
+        self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
     
@@ -28,7 +28,8 @@ class Runner:
             y_bbox = y_gt['bbox'].cuda(non_blocking=True) # shape (N, max_n_box, 4)
 
             # forward
-            feat_1, feat_2, feat_3 = self.model(x)
+            model = self.model.to(self.device)
+            feat_1, feat_2, feat_3 = model(x)
             # feat_1, feat_2, feat_3 : shape (N, 255, 52, 52), (N, 255, 26, 26), (N, 255, 13, 13)
             # 255 = 3 anchors * (4 bboxes + 1 objectness + 80 classes)
             
@@ -54,6 +55,7 @@ class Runner:
             init_feat_3_class = einops.rearrange(feat_3_class, 'n (n_anchor n_class) h w -> n (n_anchor h w) n_class', n_class=self.args.n_class) # shape (N, n_box, 80) where n_box = 3 * 13 * 13
 
             loss = 0
+            loss_n = 0
             acc = 0
             acc_n = 0
 
@@ -111,8 +113,9 @@ class Runner:
                 loss_big = self.loss(big_iou, feat_3_bbox_offset, feat_3_objectness, feat_3_class, box_i, label_i, feat_3.shape[2], feat_3.shape[3])  
                 acc_big = self.accuracy(big_iou, feat_3_objectness, feat_3_class, label_i)
 
-                loss += (loss_small + loss_middle + loss_big)  
-                acc += (acc_n * acc + (acc_small + acc_middle + acc_big) / 3) / (acc_n + 1)
+                loss = (loss_n * loss + (loss_small + loss_middle + loss_big)) / (loss_n + 1)
+                acc = (acc_n * acc + (acc_small + acc_middle + acc_big) / 3) / (acc_n + 1)
+                loss_n += 1
                 acc_n += 1
             
             with torch.no_grad():
@@ -125,7 +128,7 @@ class Runner:
             # accumulate, and then backward
             if (iter + 1) % self.args.accumulate_iter == 0:
                 # gradient clipping
-                nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
+                nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
 
                 # backward
                 self.optimizer.step()
@@ -141,6 +144,8 @@ class Runner:
                 train_log.write(epoch, iter, len(dataloader))
                 if iter != len(dataloader) - 1:
                     train_log.init()
+
+            torch.cuda.empty_cache()
         
         return train_log.acc_avg, train_log.loss_avg
 
@@ -158,7 +163,8 @@ class Runner:
                 y_bbox = y_gt['bbox'].cuda(non_blocking=True) # shape (N, max_n_box, 4)
 
                 # forward
-                feat_1, feat_2, feat_3 = self.model(x)
+                model = self.model.to(self.device)
+                feat_1, feat_2, feat_3 = model(x)
                 # feat_1, feat_2, feat_3 : shape (N, 255, 52, 52), (N, 255, 26, 26), (N, 255, 13, 13)
                 # 255 = 3 anchors * (4 bboxes + 1 objectness + 80 classes)
                 
@@ -184,6 +190,7 @@ class Runner:
                 init_feat_3_class = einops.rearrange(feat_3_class, 'n (n_anchor n_class) h w -> n (n_anchor h w) n_class', n_class=self.args.n_class) # shape (N, n_box, 80) where n_box = 3 * 13 * 13
 
                 loss = 0
+                loss_n = 0
                 acc = 0
                 acc_n = 0
 
@@ -241,9 +248,10 @@ class Runner:
                     loss_big = self.loss(big_iou, feat_3_bbox_offset, feat_3_objectness, feat_3_class, box_i, label_i, feat_3.shape[2], feat_3.shape[3])  
                     acc_big = self.accuracy(big_iou, feat_3_objectness, feat_3_class, label_i)
 
-                    loss += (loss_small + loss_middle + loss_big)  
-                    acc += (acc_n * acc + (acc_small + acc_middle + acc_big) / 3) / (acc_n + 1)
+                    loss = (loss_n * loss + (loss_small + loss_middle + loss_big)) / (loss_n + 1)
+                    acc = (acc_n * acc + (acc_small + acc_middle + acc_big) / 3) / (acc_n + 1)
                     acc_n += 1
+                    loss_n += 1
                 
                 val_log.accumulate(loss.item(), acc, x.size(0))
                 
@@ -257,6 +265,8 @@ class Runner:
                     val_log.write(epoch, iter, len(dataloader))
                     if iter != len(dataloader) - 1:
                         val_log.init()
+
+                torch.cuda.empty_cache()
         
         return val_log.acc_avg, val_log.loss_avg
 
@@ -271,7 +281,8 @@ class Runner:
                 x = x.cuda(non_blocking=True)
 
                 # forward
-                feat_1, feat_2, feat_3 = self.model(x)
+                model = self.model.to(self.device)
+                feat_1, feat_2, feat_3 = model(x)
                 # feat_1, feat_2, feat_3 : shape (N, 255, 52, 52), (N, 255, 26, 26), (N, 255, 13, 13)
                 # 255 = 3 anchors * (4 bboxes + 1 objectness + 80 classes)
                 
@@ -353,6 +364,8 @@ class Runner:
                     
                     cv2.imshow(f"Image {i+1}", cv_img)
                     cv2.waitKey(0)  # wait for keyboard input
+
+                torch.cuda.empty_cache()
 
     def offset_to_bbox(self, H, W, h, w, feat_offset):
         # H, W = x.shape[2], x.shape[3]
@@ -470,8 +483,10 @@ class Runner:
         best_objectness = torch.gather(feat_objectness, 1, best_box_idx.unsqueeze(1)).reshape(N) # shape (N,) -> (N, 1) -> (N, 1) after indexing (N, n_box) -> (N,)
         best_class = torch.gather(feat_class, 1, best_box_idx.unsqueeze(1).unsqueeze(1).repeat(1, 1, feat_class.shape[2])).reshape(N, feat_class.shape[2]) # shape (N,) -> (N, 1, 1) -> (N, 1, 80) -> (N, 1, 80) after indexing (N, n_box, 80) -> (N, 80)
         
-        best_class = best_class[best_objectness > 0.5] # shape (new_N, 80) # calculate accuracy only for objectness score > 0.5
-        gt_label_obj = gt_label[best_objectness > 0.5] # shape (new_N,) # calculate accuracy only for objectness score > 0.5
+        best_class = best_class[best_objectness > 0.2] # shape (new_N, 80) # calculate accuracy only for objectness score > 0.2
+        gt_label_obj = gt_label[best_objectness > 0.2] # shape (new_N,) # calculate accuracy only for objectness score > 0.2
+        if gt_label_obj.numel() == 0:
+            return 0
         _, best_class_idx = best_class.topk(k, dim=1) # shape (new_N, k)
         best_class_idx = best_class_idx if best_class_idx.shape[1] != 1 else best_class_idx.reshape(best_class.shape[0])
 

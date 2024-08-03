@@ -58,6 +58,7 @@ class CustomDataset(torch.utils.data.Dataset):
         return len(self.images)
     
     def __getitem__(self, idx):
+        # lazy loading
         if self.mode == 'train' or self.mode == 'val':
             img_id = self.image_id[idx] # idx-th image id
             
