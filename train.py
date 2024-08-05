@@ -479,20 +479,37 @@ class Runner:
         N = iou.shape[0]
 
         # Step 1. find best-match feat_box
-        _, best_box_idx = torch.max(iou, dim=1, keepdim=False) # shape (N,) and element range [0, n_box)
+        best_box_iou, best_box_idx = torch.max(iou, dim=1, keepdim=False) # shape (N,) and element range [0, n_box)
         best_objectness = torch.gather(feat_objectness, 1, best_box_idx.unsqueeze(1)).reshape(N) # shape (N,) -> (N, 1) -> (N, 1) after indexing (N, n_box) -> (N,)
         best_class = torch.gather(feat_class, 1, best_box_idx.unsqueeze(1).unsqueeze(1).repeat(1, 1, feat_class.shape[2])).reshape(N, feat_class.shape[2]) # shape (N,) -> (N, 1, 1) -> (N, 1, 80) -> (N, 1, 80) after indexing (N, n_box, 80) -> (N, 80)
-        
-        best_class = best_class[best_objectness > 0.2] # shape (new_N, 80) # calculate accuracy only for objectness score > 0.2
-        gt_label_obj = gt_label[best_objectness > 0.2] # shape (new_N,) # calculate accuracy only for objectness score > 0.2
-        if gt_label_obj.numel() == 0:
+
+        # Step 2. filter-out false or negative (leave only true and positive)
+        '''
+        filter_class_list = []
+        filter_gt_list = []
+        for i in range(best_box_iou.shape[0]): # iterate for each image
+            if best_objectness[i] < self.args.acc_obj_thres: # false
+                continue
+            if best_box_iou[i] < self.args.acc_iou_thres: # negative
+                continue
+            filter_class_list.append(best_class[i]) # list of tensor (80,)
+            filter_gt_list.append(gt_label[i]) # list of int
+        filter_class = torch.stack(filter_class_list, dim=0) # shape (new_N, 80)
+        filter_gt_label = torch.tensor(filter_gt_list, device=self.device) # shape (new_N,)
+        '''
+        filter_class = best_class[torch.logical_and(best_objectness > self.args.acc_obj_thres, best_box_iou > self.args.acc_iou_thres)] # shape (new_N, 80)
+        filter_gt = gt_label[torch.logical_and(best_objectness > self.args.acc_obj_thres, best_box_iou > self.args.acc_iou_thres)] # shape (new_N,)
+        if filter_gt.numel() == 0: # if new_N == 0
             return 0
-        _, best_class_idx = best_class.topk(k, dim=1) # shape (new_N, k)
-        best_class_idx = best_class_idx if best_class_idx.shape[1] != 1 else best_class_idx.reshape(best_class.shape[0])
 
-        n_correct = torch.sum(best_class_idx == gt_label_obj).item()
+        # Step 3. calculate accuracy by comparing top-k classes
+        _, best_class_idx = filter_class.topk(k, dim=1) # shape (new_N, k)
+        best_class_idx = best_class_idx if best_class_idx.shape[1] != 1 else best_class_idx.reshape(best_class.shape[0]) # shape (new_N, k) if k != 1 else (new_N,)
 
-        return n_correct / len(gt_label_obj)
+        n_correct = torch.sum(best_class_idx == filter_gt).item()
+
+        ''' # of true-positive images / # of total images '''
+        return n_correct / (len(gt_label)+1e-6)
     
     def NMS(self, feat_bbox, feat_objectness):
         # feat_bbox : shape (n_box, 4) where n_box = 3*52*52 + 3*26*26 + 3*13*13

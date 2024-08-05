@@ -60,6 +60,8 @@ def arg_parse():
     parser.add_argument("--small_anchor_size", nargs=6, type=int, default=[10, 13, 16, 30, 33, 23], help='A list of 3 anchor sizes for 52x52 big feature map')
     parser.add_argument("--iou_thres", type=float, default=0.5)
     parser.add_argument("--NMS_thres", type=float, default=0.3)
+    parser.add_argument("--acc_obj_thres", type=float, default=0.3)
+    parser.add_argument("--acc_iou_thres", type=float, default=0.5)
 
     return parser.parse_args()
 
