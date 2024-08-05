@@ -111,14 +111,14 @@ class CustomDataset(torch.utils.data.Dataset):
                 bboxes_o[:, [1, 3]] = bboxes[:, [1, 3]] / h_ratio
 
         # RandomHorizontalFlip
-        if torch.rand(1) < 0.5:
+        if torch.rand(1).item() < 0.5:
             img_oo = img_o.clone()
             for i in range(img_o.shape[2]):
                 img_o[:, :, i] = img_oo[:, :, img_o.shape[2]-1 - i] # x = w-1 - x
             bboxes_o[:, 0] = img_o.shape[2]-1 - (bboxes_o[:, 0] + bboxes_o[:, 2]) # x = (w-1) - (x+w)
 
         # RandomVerticalFlip
-        if torch.rand(1) < 0.5:
+        if torch.rand(1).item() < 0.5:
             img_oo = img_o.clone()
             for i in range(img_o.shape[1]):
                 img_o[:, i, :] = img_oo[:, img_o.shape[1]-1 - i, :] # y = h-1 - y
