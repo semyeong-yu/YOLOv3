@@ -14,13 +14,13 @@ class CustomDataset(torch.utils.data.Dataset):
         # data path
         os.makedirs(args.data_dir, exist_ok=True)
         if mode == 'train':
-            self.img_path = os.path.join(args.data_dir, args.img_dir_train)
-            self.json_path = os.path.join(args.data_dir, args.gt_json_train)
+            self.img_path = os.path.join(args.data_dir, args.img_dir_train) #.replace(os.path.sep, '/')
+            self.json_path = os.path.join(args.data_dir, args.gt_json_train) #.replace(os.path.sep, '/')
         elif mode == 'val':
-            self.img_path = os.path.join(args.data_dir, args.img_dir_val)
-            self.json_path = os.path.join(args.data_dir, args.gt_json_val)
+            self.img_path = os.path.join(args.data_dir, args.img_dir_val) #.replace(os.path.sep, '/')
+            self.json_path = os.path.join(args.data_dir, args.gt_json_val) #.replace(os.path.sep, '/')
         elif mode == 'test':
-            self.img_path = os.path.join(args.data_dir, args.img_dir_test)
+            self.img_path = os.path.join(args.data_dir, args.img_dir_test) #.replace(os.path.sep, '/')
             self.json_path = None
 
         if mode == 'train' or mode == 'val':        
@@ -46,13 +46,15 @@ class CustomDataset(torch.utils.data.Dataset):
             for elem in images:
                 if elem['id'] not in list(self.annotations.keys()): # filter-out images which have no gt info.
                     continue
+                if not os.path.exists(os.path.join(self.img_path, elem['file_name'])): # filter-out non-existing images
+                    continue
                 self.images[elem['id']] = elem['file_name']
 
             self.image_id = list(self.images.keys()) # list of unique img_id   # use for indexing at __getitem__()
         
         elif mode == 'test':
             # list of image filenames
-            self.images = glob.glob(os.path.join(self.img_path, '*.jpg'))
+            self.images = glob.glob(os.path.join(self.img_path, '*.jpg')) # .replace(os.path.sep, '/')
 
     def __len__(self):
         return len(self.images)
@@ -63,7 +65,7 @@ class CustomDataset(torch.utils.data.Dataset):
             img_id = self.image_id[idx] # idx-th image id
             
             # deal with image
-            np_img = cv2.imread(os.path.join(self.img_path, self.images[img_id])) # np.ndarray (H, W, C) [0, 255]     
+            np_img = cv2.imread(os.path.join(self.img_path, self.images[img_id])) # .replace(os.path.sep, '/') # np.ndarray (H, W, C) [0, 255]
             img = torch.tensor(np_img.transpose((2, 0, 1)).astype(float)).mul_(1.0) / 255.0 # tensor (C, H, W) [0., 1.]
 
             # deal with annotation
@@ -78,7 +80,9 @@ class CustomDataset(torch.utils.data.Dataset):
 
             # data augmentation
             if self.mode =='train':
-                img, bboxes = self.augment(img, bboxes)
+                img, bboxes = self.randomflip(self.resize(img, bboxes))
+            elif self.mode =='val':
+                img, bboxes = self.resize(img, bboxes)
 
             target = {}
             target['label'] = labels
@@ -88,11 +92,12 @@ class CustomDataset(torch.utils.data.Dataset):
             # deal with image
             np_img = cv2.imread(self.images[idx]) # np.ndarray (H, W, C) [0, 255]
             img = torch.tensor(np_img.transpose((2, 0, 1)).astype(float)).mul_(1.0) / 255.0 # tensor (C, H, W) [0., 1.]
+            img = self.resize(img)
             target = {} # empty target for test mode
         
         return img, target
     
-    def augment(self, img, bboxes):
+    def resize(self, img, bboxes=None):
         # data augmentation
         # img : tensor (C, H, W) [0., 1.]
         # bboxes : tensor (n_boxes, 4)
@@ -102,29 +107,48 @@ class CustomDataset(torch.utils.data.Dataset):
         w_ratio = img.shape[2] / self.args.crop_size[0]
 
         img_o = torch.zeros(img.shape[0], self.args.crop_size[1], self.args.crop_size[0])
-        bboxes_o = torch.zeros_like(bboxes)
+        if bboxes is not None:
+            bboxes_o = bboxes.clone()
 
         for i in range(img_o.shape[1]):
             for j in range(img_o.shape[2]):
                 img_o[:, i, j] = img[:, int(i * h_ratio), int(j * w_ratio)]
-                bboxes_o[:, [0, 2]] = bboxes[:, [0, 2]] / w_ratio
-                bboxes_o[:, [1, 3]] = bboxes[:, [1, 3]] / h_ratio
+                if bboxes is not None:
+                    bboxes_o[:, [0, 2]] = bboxes[:, [0, 2]] / w_ratio
+                    bboxes_o[:, [1, 3]] = bboxes[:, [1, 3]] / h_ratio
+
+        if bboxes is not None:
+            return img_o, bboxes_o
+        else:
+            return img_o
+
+    def randomflip(self, img, bboxes=None):
+        # data augmentation
+        # img : tensor (C, H, W) [0., 1.]
+        # bboxes : tensor (n_boxes, 4)
+
+        img_o = torch.zeros_like(img)
+        if bboxes is not None:
+            bboxes_o = bboxes.clone()
 
         # RandomHorizontalFlip
         if torch.rand(1).item() < 0.5:
-            img_oo = img_o.clone()
             for i in range(img_o.shape[2]):
-                img_o[:, :, i] = img_oo[:, :, img_o.shape[2]-1 - i] # x = w-1 - x
-            bboxes_o[:, 0] = img_o.shape[2]-1 - (bboxes_o[:, 0] + bboxes_o[:, 2]) # x = (w-1) - (x+w)
+                img_o[:, :, i] = img[:, :, img_o.shape[2]-1 - i] # x = w-1 - x
+            if bboxes is not None:
+                bboxes_o[:, 0] = img_o.shape[2]-1 - (bboxes[:, 0] + bboxes[:, 2]) # x = (w-1) - (x+w)
 
         # RandomVerticalFlip
         if torch.rand(1).item() < 0.5:
-            img_oo = img_o.clone()
             for i in range(img_o.shape[1]):
-                img_o[:, i, :] = img_oo[:, img_o.shape[1]-1 - i, :] # y = h-1 - y
-            bboxes_o[:, 1] = img_o.shape[1]-1 - (bboxes_o[:, 1] + bboxes_o[:, 3]) # y = (h-1) - (y+h)
-        
-        return img_o, bboxes_o
+                img_o[:, i, :] = img[:, img_o.shape[1]-1 - i, :] # y = h-1 - y
+            if bboxes is not None:
+                bboxes_o[:, 1] = img_o.shape[1]-1 - (bboxes[:, 1] + bboxes[:, 3]) # y = (h-1) - (y+h)
+
+        if bboxes is not None:
+            return img_o, bboxes_o
+        else:
+            return img_o
     
 def _collate_fn(samples):
     # samples : [(img1, target1), (img2, target2), ...] # tuple이 batch_size-개

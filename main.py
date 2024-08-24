@@ -185,6 +185,7 @@ def test(args, id_convert_dict):
 
     runner.test(test_loader, class_name_dict)
 
+
 def main(args):
     fix_seed(args.random_seed)
 
@@ -278,7 +279,7 @@ def main(args):
     elif args.mode == 'test':
         test(args, id_convert_dict)
 
-# python main.py --mode train --resume False --n_epochs 10 --val_epoch 2
+# python main.py --mode train --n_epochs 10 --val_epoch 2 --no_resume
 if __name__ == "__main__":
     args = arg_parse()
     main(args)

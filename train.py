@@ -14,7 +14,7 @@ class Runner:
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
-    
+
     def train(self, dataloader, train_log, epoch):
         
         self.model.train()
@@ -82,11 +82,13 @@ class Runner:
                 feat_1 : 52 * 52 [grid]
                 1 [grid] corresponds to 8 * 8 [pixel]
                 '''
+                feat_1_objectness = torch.sigmoid(feat_1_objectness)  # shape (N, n_box) where n_box = 3 * 52 * 52
+                feat_1_class = torch.sigmoid(feat_1_class)  # shape (N, n_box, 80) where n_box = 3 * 52 * 52
                 # get IoU
-                feat_1_bbox_bbox = self.offset_to_bbox(x.shape[2], x.shape[3], feat_1.shape[2], feat_1.shape[3], feat_1_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
+                feat_1_bbox_bbox = self.offset_to_bbox('small', x.shape[2], x.shape[3], feat_1.shape[2], feat_1.shape[3], feat_1_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
                 small_iou = IoU(feat_1_bbox_bbox, box_i.unsqueeze(1)) # shape (N, n_box)
                 # get loss
-                loss_small = self.loss(small_iou, feat_1_bbox_offset, feat_1_objectness, feat_1_class, box_i, label_i, feat_1.shape[2], feat_1.shape[3])    
+                loss_small = self.loss('small', small_iou, feat_1_bbox_offset, feat_1_objectness, feat_1_class, box_i, label_i, feat_1.shape[2], feat_1.shape[3])
                 acc_small = self.accuracy(small_iou, feat_1_objectness, feat_1_class, label_i)
 
                 '''
@@ -94,11 +96,13 @@ class Runner:
                 feat_2 : 26 * 26 [grid]
                 1 [grid] corresponds to 16 * 16 [pixel]
                 '''
+                feat_2_objectness = torch.sigmoid(feat_2_objectness)  # shape (N, n_box) where n_box = 3 * 26 * 26
+                feat_2_class = torch.sigmoid(feat_2_class)  # shape (N, n_box, 80) where n_box = 3 * 26 * 26
                 # get IoU
-                feat_2_bbox_bbox = self.offset_to_bbox(x.shape[2], x.shape[3], feat_2.shape[2], feat_2.shape[3], feat_2_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
+                feat_2_bbox_bbox = self.offset_to_bbox('middle', x.shape[2], x.shape[3], feat_2.shape[2], feat_2.shape[3], feat_2_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
                 middle_iou = IoU(feat_2_bbox_bbox, box_i.unsqueeze(1)) # shape (N, n_box)
                 # get loss
-                loss_middle = self.loss(middle_iou, feat_2_bbox_offset, feat_2_objectness, feat_2_class, box_i, label_i, feat_2.shape[2], feat_2.shape[3])    
+                loss_middle = self.loss('middle', middle_iou, feat_2_bbox_offset, feat_2_objectness, feat_2_class, box_i, label_i, feat_2.shape[2], feat_2.shape[3])
                 acc_middle = self.accuracy(middle_iou, feat_2_objectness, feat_2_class, label_i)
 
                 '''
@@ -106,11 +110,13 @@ class Runner:
                 feat_3 : 13 * 13 [grid]
                 1 [grid] corresponds to 32 * 32 [pixel]
                 '''
+                feat_3_objectness = torch.sigmoid(feat_3_objectness)  # shape (N, n_box) where n_box = 3 * 13 * 13
+                feat_3_class = torch.sigmoid(feat_3_class)  # shape (N, n_box, 80) where n_box = 3 * 13 * 13
                 # get IoU
-                feat_3_bbox_bbox = self.offset_to_bbox(x.shape[2], x.shape[3], feat_3.shape[2], feat_3.shape[3], feat_3_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
+                feat_3_bbox_bbox = self.offset_to_bbox('big', x.shape[2], x.shape[3], feat_3.shape[2], feat_3.shape[3], feat_3_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
                 big_iou = IoU(feat_3_bbox_bbox, box_i.unsqueeze(1)) # shape (N, n_box)
                 # get loss
-                loss_big = self.loss(big_iou, feat_3_bbox_offset, feat_3_objectness, feat_3_class, box_i, label_i, feat_3.shape[2], feat_3.shape[3])  
+                loss_big = self.loss('big', big_iou, feat_3_bbox_offset, feat_3_objectness, feat_3_class, box_i, label_i, feat_3.shape[2], feat_3.shape[3])
                 acc_big = self.accuracy(big_iou, feat_3_objectness, feat_3_class, label_i)
 
                 loss = (loss_n * loss + (loss_small + loss_middle + loss_big)) / (loss_n + 1)
@@ -217,11 +223,13 @@ class Runner:
                     feat_1 : 52 * 52 [grid]
                     1 [grid] corresponds to 8 * 8 [pixel]
                     '''
+                    feat_1_objectness = torch.sigmoid(feat_1_objectness)  # shape (N, n_box) where n_box = 3 * 52 * 52
+                    feat_1_class = torch.sigmoid(feat_1_class)  # shape (N, n_box, 80) where n_box = 3 * 52 * 52
                     # get IoU
-                    feat_1_bbox_bbox = self.offset_to_bbox(x.shape[2], x.shape[3], feat_1.shape[2], feat_1.shape[3], feat_1_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
+                    feat_1_bbox_bbox = self.offset_to_bbox('small', x.shape[2], x.shape[3], feat_1.shape[2], feat_1.shape[3], feat_1_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
                     small_iou = IoU(feat_1_bbox_bbox, box_i.unsqueeze(1)) # shape (N, n_box)
                     # get loss
-                    loss_small = self.loss(small_iou, feat_1_bbox_offset, feat_1_objectness, feat_1_class, box_i, label_i, feat_1.shape[2], feat_1.shape[3])    
+                    loss_small = self.loss('small', small_iou, feat_1_bbox_offset, feat_1_objectness, feat_1_class, box_i, label_i, feat_1.shape[2], feat_1.shape[3])
                     acc_small = self.accuracy(small_iou, feat_1_objectness, feat_1_class, label_i)
 
                     '''
@@ -229,11 +237,13 @@ class Runner:
                     feat_2 : 26 * 26 [grid]
                     1 [grid] corresponds to 16 * 16 [pixel]
                     '''
+                    feat_2_objectness = torch.sigmoid(feat_2_objectness)  # shape (N, n_box) where n_box = 3 * 26 * 26
+                    feat_2_class = torch.sigmoid(feat_2_class)  # shape (N, n_box, 80) where n_box = 3 * 26 * 26
                     # get IoU
-                    feat_2_bbox_bbox = self.offset_to_bbox(x.shape[2], x.shape[3], feat_2.shape[2], feat_2.shape[3], feat_2_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
+                    feat_2_bbox_bbox = self.offset_to_bbox('middle', x.shape[2], x.shape[3], feat_2.shape[2], feat_2.shape[3], feat_2_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
                     middle_iou = IoU(feat_2_bbox_bbox, box_i.unsqueeze(1)) # shape (N, n_box)
                     # get loss
-                    loss_middle = self.loss(middle_iou, feat_2_bbox_offset, feat_2_objectness, feat_2_class, box_i, label_i, feat_2.shape[2], feat_2.shape[3])    
+                    loss_middle = self.loss('middle', middle_iou, feat_2_bbox_offset, feat_2_objectness, feat_2_class, box_i, label_i, feat_2.shape[2], feat_2.shape[3])
                     acc_middle = self.accuracy(middle_iou, feat_2_objectness, feat_2_class, label_i)
 
                     '''
@@ -241,11 +251,13 @@ class Runner:
                     feat_3 : 13 * 13 [grid]
                     1 [grid] corresponds to 32 * 32 [pixel]
                     '''
+                    feat_3_objectness = torch.sigmoid(feat_3_objectness)  # shape (N, n_box) where n_box = 3 * 13 * 13
+                    feat_3_class = torch.sigmoid(feat_3_class)  # shape (N, n_box, 80) where n_box = 3 * 13 * 13
                     # get IoU
-                    feat_3_bbox_bbox = self.offset_to_bbox(x.shape[2], x.shape[3], feat_3.shape[2], feat_3.shape[3], feat_3_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
+                    feat_3_bbox_bbox = self.offset_to_bbox('big', x.shape[2], x.shape[3], feat_3.shape[2], feat_3.shape[3], feat_3_bbox_offset) # convert from offset to box for IoU calculation # shape (N, n_box, 4)
                     big_iou = IoU(feat_3_bbox_bbox, box_i.unsqueeze(1)) # shape (N, n_box)
                     # get loss
-                    loss_big = self.loss(big_iou, feat_3_bbox_offset, feat_3_objectness, feat_3_class, box_i, label_i, feat_3.shape[2], feat_3.shape[3])  
+                    loss_big = self.loss('big', big_iou, feat_3_bbox_offset, feat_3_objectness, feat_3_class, box_i, label_i, feat_3.shape[2], feat_3.shape[3])
                     acc_big = self.accuracy(big_iou, feat_3_objectness, feat_3_class, label_i)
 
                     loss = (loss_n * loss + (loss_small + loss_middle + loss_big)) / (loss_n + 1)
@@ -312,7 +324,7 @@ class Runner:
                 feat_1 : 52 * 52 [grid]
                 1 [grid] corresponds to 8 * 8 [pixel]
                 '''
-                feat_1_bbox_bbox = self.offset_to_bbox(x.shape[2], x.shape[3], feat_1.shape[2], feat_1.shape[3], feat_1_bbox_offset) # shape (N, n_box, 4)
+                feat_1_bbox_bbox = self.offset_to_bbox('small', x.shape[2], x.shape[3], feat_1.shape[2], feat_1.shape[3], feat_1_bbox_offset) # shape (N, n_box, 4)
                 feat_1_objectness = torch.sigmoid(feat_1_objectness) # shape (N, n_box) where n_box = 3 * 52 * 52
                 feat_1_class = torch.sigmoid(feat_1_class) # shape (N, n_box, 80) where n_box = 3 * 52 * 52
 
@@ -321,7 +333,7 @@ class Runner:
                 feat_2 : 26 * 26 [grid]
                 1 [grid] corresponds to 16 * 16 [pixel]
                 '''
-                feat_2_bbox_bbox = self.offset_to_bbox(x.shape[2], x.shape[3], feat_2.shape[2], feat_2.shape[3], feat_2_bbox_offset) # shape (N, n_box, 4)
+                feat_2_bbox_bbox = self.offset_to_bbox('middle', x.shape[2], x.shape[3], feat_2.shape[2], feat_2.shape[3], feat_2_bbox_offset) # shape (N, n_box, 4)
                 feat_2_objectness = torch.sigmoid(feat_2_objectness) # shape (N, n_box) where n_box = 3 * 26 * 26
                 feat_2_class = torch.sigmoid(feat_2_class) # shape (N, n_box, 80) where n_box = 3 * 26 * 26
 
@@ -330,7 +342,7 @@ class Runner:
                 feat_3 : 13 * 13 [grid]
                 1 [grid] corresponds to 32 * 32 [pixel]
                 '''
-                feat_3_bbox_bbox = self.offset_to_bbox(x.shape[2], x.shape[3], feat_3.shape[2], feat_3.shape[3], feat_3_bbox_offset) # shape (N, n_box, 4)
+                feat_3_bbox_bbox = self.offset_to_bbox('big', x.shape[2], x.shape[3], feat_3.shape[2], feat_3.shape[3], feat_3_bbox_offset) # shape (N, n_box, 4)
                 feat_3_objectness = torch.sigmoid(feat_3_objectness) # shape (N, n_box) where n_box = 3 * 13 * 13
                 feat_3_class = torch.sigmoid(feat_3_class) # shape (N, n_box, 80) where n_box = 3 * 13 * 13
 
@@ -367,7 +379,7 @@ class Runner:
 
                 torch.cuda.empty_cache()
 
-    def offset_to_bbox(self, H, W, h, w, feat_offset):
+    def offset_to_bbox(self, mode, H, W, h, w, feat_offset):
         # H, W = x.shape[2], x.shape[3]
         # h, w = feat_1.shape[2], feat_1.shape[3]
         # feat_offset : shape (N, n_box, 4) where n_box = n_anchor * h * w = 3 * h * w
@@ -379,10 +391,22 @@ class Runner:
                 [8, 8, 8, ..., 8],
                 ...]
         '''
+
+        if mode == 'small':
+            anchor_size_w = self.args.small_anchor_size[::2]
+            anchor_size_h = self.args.small_anchor_size[1::2]
+        elif mode == 'middle':
+            anchor_size_w = self.args.middle_anchor_size[::2]
+            anchor_size_h = self.args.middle_anchor_size[1::2]
+        elif mode == 'big':
+            anchor_size_w = self.args.big_anchor_size[::2]
+            anchor_size_h = self.args.big_anchor_size[1::2]
+
+        # torch.meshgrid() 쓰면 c_x, c_y 쉽게 구현 가능
         c_x = torch.arange(0, W, W // w).repeat(h, 1) # shape (h, w) = (52, 52)
         c_y = torch.arange(0, H, H // h).reshape(h, 1).repeat(1, w) # shape (52, 52)
-        p_w = torch.tensor(self.args.small_anchor_size[::2]) # shape (3,)
-        p_h = torch.tensor(self.args.small_anchor_size[1::2]) # shape (3,)
+        p_w = torch.tensor(anchor_size_w) # shape (3,)
+        p_h = torch.tensor(anchor_size_h) # shape (3,)
         if self.device:
             c_x, c_y, p_w, p_h = c_x.to(self.device), c_y.to(self.device), p_w.to(self.device), p_h.to(self.device)
 
@@ -411,32 +435,41 @@ class Runner:
 
         return torch.stack([b_x, b_y, b_w, b_h], dim=-1).reshape(N, -1, coord) # shape (N, 3, 52, 52, 4) -> shape (N, 3*52*52, 4) = (N, n_box, 4) where 4 : x_c, y_c, w, h
 
-    def bbox_to_offset(self, gt_box, anchor_idx):
+    def bbox_to_offset(self, mode, gt_box, anchor_idx):
         # gt_box : shape (N, 4) where 4 : x_tl, y_tl, w, h
         # anchor_idx : shape (N,) where element is 0 or 1 or 2
+
+        if mode == 'small':
+            anchor_size = self.args.small_anchor_size
+        elif mode == 'middle':
+            anchor_size = self.args.middle_anchor_size
+        elif mode == 'big':
+            anchor_size = self.args.big_anchor_size
+
         N = gt_box.shape[0]
         gt_box = torch.stack([gt_box[:, 0]+gt_box[:, 2]//2, gt_box[:, 1]+gt_box[:, 3]//2, gt_box[:, 2], gt_box[:, 3]], dim=1) # shape (N, 4) where 4 : x_tl, y_tl, w, h -> x_c, y_c, w, h
         c_x = torch.floor(gt_box[:, 0]) # shape (N,)
         c_y = torch.floor(gt_box[:, 1]) # shape (N,)
-        p_w = torch.where(anchor_idx == 0, torch.full((N,), self.args.small_anchor_size[0], dtype=int, device=self.device), anchor_idx) # shape (N,)
-        p_w = torch.where(p_w == 1, torch.full((N,), self.args.small_anchor_size[2], dtype=int, device=self.device), p_w) # shape (N,)
-        p_w = torch.where(p_w == 2, torch.full((N,), self.args.small_anchor_size[4], dtype=int, device=self.device), p_w) # shape (N,)
-        p_h = torch.where(anchor_idx == 0, torch.full((N,), self.args.small_anchor_size[1], dtype=int, device=self.device), anchor_idx) # shape (N,)
-        p_h = torch.where(p_h == 1, torch.full((N,), self.args.small_anchor_size[3], dtype=int, device=self.device), p_h) # shape (N,)
-        p_h = torch.where(p_h == 2, torch.full((N,), self.args.small_anchor_size[5], dtype=int, device=self.device), p_h) # shape (N,)
+        p_w = torch.where(anchor_idx == 0, torch.full((N,), anchor_size[0], dtype=int, device=self.device), anchor_idx) # shape (N,)
+        p_w = torch.where(p_w == 1, torch.full((N,), anchor_size[2], dtype=int, device=self.device), p_w) # shape (N,)
+        p_w = torch.where(p_w == 2, torch.full((N,), anchor_size[4], dtype=int, device=self.device), p_w) # shape (N,)
+        p_h = torch.where(anchor_idx == 0, torch.full((N,), anchor_size[1], dtype=int, device=self.device), anchor_idx) # shape (N,)
+        p_h = torch.where(p_h == 1, torch.full((N,), anchor_size[3], dtype=int, device=self.device), p_h) # shape (N,)
+        p_h = torch.where(p_h == 2, torch.full((N,), anchor_size[5], dtype=int, device=self.device), p_h) # shape (N,)
 
         # t_x = inverse_sigmoid(b_x - c_x) = - log(1/(b_x - c_x) - 1)
         # t_y = inverse_sigmoid(b_y - c_y)
         # t_w = log(b_w / p_w)
         # t_h = log(b_h / p_h)
-        t_x = - torch.log(1/(gt_box[:, 0] - c_x) - 1) # shape (N,)
-        t_y = - torch.log(1/(gt_box[:, 1] - c_y) - 1) # shape (N,)
+        t_x = - torch.log(1/(gt_box[:, 0] - c_x + 1e-6) - 1) # shape (N,)
+        t_y = - torch.log(1/(gt_box[:, 1] - c_y + 1e-6) - 1) # shape (N,)
         t_w = torch.log(gt_box[:, 2] / p_w)
         t_h = torch.log(gt_box[:, 3] / p_h)
 
         return torch.stack([t_x, t_y, t_w, t_h], dim=1) # shape (N, 4)
 
-    def loss(self, iou, feat_box, feat_objectness, feat_class, gt_box, gt_label, h, w):
+    def loss(self, mode, iou, feat_box, feat_objectness, feat_class, gt_box, gt_label, h, w):
+        # mode : 'small', 'middle', or 'big'
         # iou : shape (N, n_box)
         # feat_box : shape (N, n_box, 4)
         # feat_objectness : shape (N, n_box)
@@ -453,7 +486,7 @@ class Runner:
         best_class = torch.gather(feat_class, 1, best_box_idx.unsqueeze(1).unsqueeze(1).repeat(1, 1, feat_class.shape[2])).reshape(N, feat_class.shape[2]) # shape (N,) -> (N, 1, 1) -> (N, 1, 80) -> (N, 1, 80) after indexing (N, n_box, 80) -> (N, 80)
         # Step 2. gt_box : self.bbox_to_offset()
         anchor_idx = best_box_idx // (h * w) # shape (N,) range [0, 3)
-        gt_box_offset = self.bbox_to_offset(gt_box, anchor_idx) # shape (N, 4)
+        gt_box_offset = self.bbox_to_offset(mode, gt_box, anchor_idx) # shape (N, 4)
         # Step 3. calculate bbox, object, class loss
         criterion_BCE = nn.BCEWithLogitsLoss() # Binary Cross Entropy Loss after sigmoid
         loss_bbox = torch.sum((best_box - gt_box_offset) ** 2) # SSE b.w. best_box and gt_box_offset of shape (N, 4)
@@ -504,7 +537,7 @@ class Runner:
 
         # Step 3. calculate accuracy by comparing top-k classes
         _, best_class_idx = filter_class.topk(k, dim=1) # shape (new_N, k)
-        best_class_idx = best_class_idx if best_class_idx.shape[1] != 1 else best_class_idx.reshape(best_class.shape[0]) # shape (new_N, k) if k != 1 else (new_N,)
+        best_class_idx = best_class_idx if best_class_idx.shape[1] != 1 else best_class_idx.reshape(filter_class.shape[0]) # shape (new_N, k) if k != 1 else (new_N,)
 
         n_correct = torch.sum(best_class_idx == filter_gt).item()
 

@@ -26,19 +26,19 @@ def arg_parse():
     # checkpoint dir
     parser.add_argument("--checkpoint_dir", type=str, default="./checkpoint")
     # checkpoint to resume training
-    parser.add_argument("--checkpoint_train", type=str, default="./checkpoint/0802/latest.pt")
+    parser.add_argument("--checkpoint_train", type=str, default="./checkpoint/0824/latest.pt")
     # checkpoint for to start test
-    parser.add_argument("--checkpoint_best", type=str, default="./checkpoint/0802/best.pt")
+    parser.add_argument("--checkpoint_best", type=str, default="./checkpoint/0824/best.pt")
 
     # setting
     parser.add_argument("--date", type=str, default="MMDD")
 
     # dataset
-    parser.add_argument("--crop_size", nargs=2, type=int, default=[416, 416])
+    parser.add_argument("--crop_size", nargs=2, type=int, default=[416, 416]) # crop이 아니라 resize
     parser.add_argument("--n_class", type=int, default=80) # 80 classes for COCO dataset
     parser.add_argument("--data_dir", type=str, default='./dataset')
-    parser.add_argument("--img_dir_train", type=str, default='images/train2017')
-    parser.add_argument("--img_dir_val", type=str, default='images/val2017')
+    parser.add_argument("--img_dir_train", type=str, default='images/train2017_small') # train2017small은 train2017의 사진들 중 일부를 발췌함
+    parser.add_argument("--img_dir_val", type=str, default='images/val2017_small')
     parser.add_argument("--img_dir_test", type=str, default='images/test2017')
     parser.add_argument("--gt_json_train", type=str, default='annotations/instances_train2017.json')
     parser.add_argument("--gt_json_val", type=str, default='annotations/instances_val2017.json')
