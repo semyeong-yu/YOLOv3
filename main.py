@@ -13,7 +13,8 @@ import pudb
 
 def train(args, id_convert_dict):
     # initialize model, optimizer, and scheduler
-    model = MyYOLO(hidden_dim=32, n_class=args.n_class) # COCO dataset has 80 classes
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = MyYOLO(hidden_dim=32, n_class=args.n_class).to(device) # COCO dataset has 80 classes
     optimizer = getattr(import_module("torch.optim"), args.optimizer)(model.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
     scheduler = getattr(import_module("torch.optim.lr_scheduler"), args.scheduler)(optimizer, mode='min', patience=5, verbose=True)
     start_epoch = 0
@@ -167,7 +168,8 @@ def test(args, id_convert_dict):
     }
 
     # initialize model, optimizer, and scheduler
-    model = MyYOLO(hidden_dim=32, n_class=args.n_class) # COCO dataset has 80 classes
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = MyYOLO(hidden_dim=32, n_class=args.n_class).to(device)  # COCO dataset has 80 classes
 
     # load checkpoint
     _, model, _, _ = load_checkpoint(args.checkpoint_best, model, None, None)
@@ -280,6 +282,7 @@ def main(args):
         test(args, id_convert_dict)
 
 # python main.py --mode train --n_epochs 10 --val_epoch 2 --no_resume
+# python main.py --mode test
 if __name__ == "__main__":
     args = arg_parse()
     main(args)

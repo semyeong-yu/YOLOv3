@@ -26,9 +26,9 @@ def arg_parse():
     # checkpoint dir
     parser.add_argument("--checkpoint_dir", type=str, default="./checkpoint")
     # checkpoint to resume training
-    parser.add_argument("--checkpoint_train", type=str, default="./checkpoint/0824/latest.pt")
+    parser.add_argument("--checkpoint_train", type=str, default="./checkpoint/0825/latest.pt")
     # checkpoint for to start test
-    parser.add_argument("--checkpoint_best", type=str, default="./checkpoint/0824/best.pt")
+    parser.add_argument("--checkpoint_best", type=str, default="./checkpoint/0825/best.pt")
 
     # setting
     parser.add_argument("--date", type=str, default="MMDD")
@@ -45,12 +45,12 @@ def arg_parse():
 
     # train/test
     parser.add_argument("--no_resume", action='store_true') # no_resume = True if specified in argument
-    parser.add_argument("--n_epochs", type=int, default=100, required=True)
+    parser.add_argument("--n_epochs", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--num_workers", type=int, default=8)
-    parser.add_argument("--val_epoch", type=int, default=10, required=True)
+    parser.add_argument("--val_epoch", type=int, default=10)
     parser.add_argument("--log_dir", type=str, default="./log")
-    parser.add_argument("--accumulate_iter", type=int, default=10)
+    parser.add_argument("--accumulate_iter", type=int, default=2)
     parser.add_argument("--max_grad_norm", type=float, default=5.)
     parser.add_argument("--bbox_weight", type=float, default=0.1)
     parser.add_argument("--object_weight", type=float, default=0.1)

@@ -28,7 +28,7 @@ class Runner:
             y_bbox = y_gt['bbox'].cuda(non_blocking=True) # shape (N, max_n_box, 4)
 
             # forward
-            model = self.model.to(self.device)
+            model = self.model
             feat_1, feat_2, feat_3 = model(x)
             # feat_1, feat_2, feat_3 : shape (N, 255, 52, 52), (N, 255, 26, 26), (N, 255, 13, 13)
             # 255 = 3 anchors * (4 bboxes + 1 objectness + 80 classes)
@@ -169,7 +169,7 @@ class Runner:
                 y_bbox = y_gt['bbox'].cuda(non_blocking=True) # shape (N, max_n_box, 4)
 
                 # forward
-                model = self.model.to(self.device)
+                model = self.model
                 feat_1, feat_2, feat_3 = model(x)
                 # feat_1, feat_2, feat_3 : shape (N, 255, 52, 52), (N, 255, 26, 26), (N, 255, 13, 13)
                 # 255 = 3 anchors * (4 bboxes + 1 objectness + 80 classes)
@@ -293,7 +293,7 @@ class Runner:
                 x = x.cuda(non_blocking=True)
 
                 # forward
-                model = self.model.to(self.device)
+                model = self.model
                 feat_1, feat_2, feat_3 = model(x)
                 # feat_1, feat_2, feat_3 : shape (N, 255, 52, 52), (N, 255, 26, 26), (N, 255, 13, 13)
                 # 255 = 3 anchors * (4 bboxes + 1 objectness + 80 classes)

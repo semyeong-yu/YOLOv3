@@ -80,7 +80,7 @@ class CustomDataset(torch.utils.data.Dataset):
 
             # data augmentation
             if self.mode =='train':
-                img, bboxes = self.randomflip(self.resize(img, bboxes))
+                img, bboxes = self.randomflip(*self.resize(img, bboxes))
             elif self.mode =='val':
                 img, bboxes = self.resize(img, bboxes)
 
